@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>ProWatermark 专业水印工具</title>
+    <style>
+        :root {
+            --primary: #2A2F35;
+            --secondary: #4A90E2;
+            --accent: #FF5A5F;
+            --bg: #F8F9FC;
+            --card-bg: #FFFFFF;
+            --text: #2A2F35;
+            --text-light: #6C757D;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), #4A4E55);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+        }
+
+        .folder-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            background: var(--bg);
+            border-radius: 0.75rem;
+            border: 1px solid #EDF2F7;
+        }
+
+        .dual-control {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1rem;
+            background: var(--bg);
+            border-radius: 0.75rem;
+        }
+
+        .range-slider {
+            flex: 1;
+            height: 6px;
+            background: #EDF2F7;
+            border-radius: 3px;
+            accent-color: var(--secondary);
+        }
+
+        .num-input {
+            width: 100px;
+            padding: 0.75rem;
+            border: 2px solid #EDF2F7;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--secondary);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>图片水印批量处理工具</h1>
+            <p>由“大学一点通”团队开发</p>
+        </header>
+
+        <main>
+            <div class="card">
+                <h2>📁 任务队列</h2>
+                <div id="folder-queue">
+                    <button class="btn btn-primary" onclick="addFolderPair()">
+                        ＋ 添加处理任务
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>⚙️ 参数设置</h2>
+                <div class="control-group">
+                    <input type="file" id="watermark-file" 
+                           class="btn" style="width:100%" accept="image/*">
+                </div>
+                
+                <div class="control-group">
+                    <label>不透明度</label>
+                    <div class="dual-control">
+                        <input type="range" class="range-slider" id="opacity" 
+                               min="0" max="1" step="0.01" value="0.5">
+                        <input type="number" class="num-input" id="opacity-input" 
+                               min="0" max="100" value="50">
+                        <span>%</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>缩放比例</label>
+                    <div class="dual-control">
+                        <input type="range" class="range-slider" id="scale" 
+                               min="0.1" max="5" step="0.01" value="1">
+                        <input type="number" class="num-input" id="scale-input" 
+                               min="10" max="500" value="100">
+                        <span>%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>🔍 实时预览</h2>
+                <div class="preview-nav">
+                    <button class="btn btn-primary" onclick="changePreview(-1)">← 上一张</button>
+                    <span id="preview-counter" style="padding:0 1rem">准备就绪</span>
+                    <button class="btn btn-primary" onclick="changePreview(1)">下一张 →</button>
+                </div>
+                <canvas id="preview-canvas"></canvas>
+            </div>
+
+            <div style="text-align: center; margin: 2rem 0">
+                <button class="btn btn-primary" onclick="startProcessing()" 
+                        style="padding:1.25rem 3rem; font-size:1.1rem">
+                    🚀 开始批量处理
+                </button>
+                <div class="log-panel" id="processing-log"></div>
+            </div>
+        </main>
+    </div>
+    <script>
+        const processor = {
+            queue: [],
+            watermark: null,
+            currentFolderIndex: 0,
+            currentImageIndex: 0,
+            imageList: [],
+
+            log(message, isError = false) {
+                const logElement = document.getElementById('processing-log');
+                const entry = document.createElement('div');
+                entry.className = `log-entry${isError ? ' error' : ''}`;
+                entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logElement.appendChild(entry);
+                logElement.scrollTop = logElement.scrollHeight;
+            }
+        };
+
+        // 控件绑定
+        const initControls = () => {
+            const bindControl = (sliderId, inputId, converter) => {
+                const slider = document.getElementById(sliderId);
+                const input = document.getElementById(inputId);
+                
+                slider.addEventListener('input', e => {
+                    input.value = converter(e.target.value);
+                    updatePreview();
+                });
+                
+                input.addEventListener('input', e => {
+                    slider.value = e.target.value / (converter(1) || 100);
+                    updatePreview();
+                });
+            };
+
+            bindControl('opacity', 'opacity-input', v => Math.round(v * 100));
+            bindControl('scale', 'scale-input', v => Math.round(v * 100));
+        };
+
+        // 文件夹管理
+        const updateFolderDisplay = () => {
+            const container = document.getElementById('folder-queue');
+            container.innerHTML = processor.queue.map((pair, index) => `
+                <div class="folder-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <div style="flex:1">
+                        <div>${pair.name}</div>
+                        <div style="font-size:0.9em;color:var(--text-light)">
+                            输入：${pair.input.name} → 输出：${pair.output.name}
+                        </div>
+                    </div>
+                    <button class="btn" onclick="removeFolderPair(${index})">×</button>
+                </div>
+            `).join('<button class="btn btn-primary" onclick="addFolderPair()">＋ 添加处理任务</button>');
+        };
+
+        async function addFolderPair() {
+            try {
+                const [inputHandle, outputHandle] = await Promise.all([
+                    window.showDirectoryPicker(),
+                    window.showDirectoryPicker()
+                ]);
+
+                processor.queue.push({
+                    input: inputHandle,
+                    output: outputHandle,
+                    name: `任务组-${processor.queue.length + 1}`
+                });
+                
+                updateFolderDisplay();
+                processor.log(`✅ 已添加任务组：${inputHandle.name}`);
+                
+                if (processor.queue.length === 1) {
+                    await loadPreviewImages(0);
+                }
+            } catch (error) {
+                processor.log(`❌ 添加失败：${error.message}`, true);
+            }
+        }
+
+        // 以下为其他核心函数...
+        // 需要继续补充JavaScript代码
+    </script>
+</body>
+</html>
+
+    <script>
+        // 第六部分：核心功能实现
+        // 图片加载与预览系统
+        async function loadPreviewImages(folderIndex) {
+            const folder = processor.queue[folderIndex];
+            if (!folder) return;
+
+            processor.imageList = [];
+            processor.currentFolderIndex = folderIndex;
+            
+            // 递归扫描目录
+            const scanDirectory = async (dirHandle, path = '') => {
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'directory') {
+                        await scanDirectory(entry, `${path}${entry.name}/`);
+                    } else if (/\.(png|jpe?g)$/i.test(entry.name)) {
+                        processor.imageList.push({
+                            handle: entry,
+                            path: `${path}${entry.name}`
+                        });
+                    }
+                }
+            };
+
+            await scanDirectory(folder.input);
+            processor.currentImageIndex = 0;
+            updatePreview();
+            processor.log(`已加载 ${folder.name} 的 ${processor.imageList.length} 张图片`);
+        }
+
+        // 预览更新函数
+        async function updatePreview() {
+            const canvas = document.getElementById('preview-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (!processor.imageList.length) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+
+            try {
+                const entry = processor.imageList[processor.currentImageIndex];
+                const file = await entry.handle.getFile();
+                const img = await createImageBitmap(file);
+                
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+
+                if (processor.watermark) {
+                    const scale = parseFloat(document.getElementById('scale').value);
+                    const opacity = parseFloat(document.getElementById('opacity').value);
+                    const wmWidth = processor.watermark.width * scale;
+                    const wmHeight = processor.watermark.height * scale;
+                    
+                    // 动态位置计算
+                    const padding = 20;
+                    const positionMap = {
+                        'top-left': [padding, padding],
+                        'top-right': [canvas.width - wmWidth - padding, padding],
+                        'bottom-left': [padding, canvas.height - wmHeight - padding],
+                        'bottom-right': [
+                            canvas.width - wmWidth - padding,
+                            canvas.height - wmHeight - padding
+                        ],
+                        'center': [
+                            (canvas.width - wmWidth) / 2,
+                            (canvas.height - wmHeight) / 2
+                        ]
+                    };
+                    
+                    const position = document.querySelector('#position-selector')?.value || 'bottom-right';
+                    const [x, y] = positionMap[position];
+
+                    ctx.globalAlpha = opacity;
+                    ctx.drawImage(processor.watermark, x, y, wmWidth, wmHeight);
+                    ctx.globalAlpha = 1.0;
+                }
+
+                document.getElementById('preview-counter').textContent = 
+                    `${processor.currentFolderIndex+1}号任务组 第${processor.currentImageIndex+1}/${processor.imageList.length}张`;
+            } catch (error) {
+                processor.log(`预览更新失败: ${error.message}`, true);
+            }
+        }
+
+        // 导航控制
+        function changePreview(direction) {
+            const newIndex = processor.currentImageIndex + direction;
+            if (newIndex >= 0 && newIndex < processor.imageList.length) {
+                processor.currentImageIndex = newIndex;
+                updatePreview();
+            }
+        }
+
+        // 批量处理核心
+        async function startProcessing() {
+            if (!processor.watermark) {
+                processor.log('❌ 请先上传水印图片', true);
+                return;
+            }
+
+            for (let i = 0; i < processor.queue.length; i++) {
+                const folder = processor.queue[i];
+                processor.log(`🚧 开始处理任务组: ${folder.name}`);
+                
+                try {
+                    await processFolder(folder.input, folder.output);
+                    processor.log(`✅ 完成处理: ${folder.name}`);
+                } catch (error) {
+                    processor.log(`❌ 处理失败: ${folder.name} - ${error.message}`, true);
+                }
+            }
+            processor.log('🎉 所有任务处理完成');
+        }
+
+        // 递归处理文件夹
+        async function processFolder(inputHandle, outputHandle, path = '') {
+            // 创建输出目录
+            const outputDir = path ? 
+                await outputHandle.getDirectoryHandle(path, { create: true }) : 
+                outputHandle;
+
+            // 遍历输入目录
+            for await (const entry of inputHandle.values()) {
+                const entryPath = `${path}${entry.name}`;
+                
+                if (entry.kind === 'directory') {
+                    await processFolder(entry, outputHandle, `${entryPath}/`);
+                } else if (entry.kind === 'file') {
+                    if (/\.(png|jpe?g)$/i.test(entry.name)) {
+                        await processFile(entry, outputDir, entryPath);
+                    }
+                }
+            }
+        }
+
+        // 处理单个文件
+        async function processFile(fileHandle, outputDir, filePath) {
+            try {
+                const file = await fileHandle.getFile();
+                const img = await createImageBitmap(file);
+                
+                // 创建画布
+                const canvas = new OffscreenCanvas(img.width, img.height);
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                // 应用水印
+                const scale = parseFloat(document.getElementById('scale').value);
+                const opacity = parseFloat(document.getElementById('opacity').value);
+                const wmWidth = processor.watermark.width * scale;
+                const wmHeight = processor.watermark.height * scale;
+                const [x, y] = [canvas.width - wmWidth - 20, canvas.height - wmHeight - 20];
+                
+                ctx.globalAlpha = opacity;
+                ctx.drawImage(processor.watermark, x, y, wmWidth, wmHeight);
+                
+                // 输出文件
+                const outputFile = await outputDir.getFileHandle(fileHandle.name, { create: true });
+                const writable = await outputFile.createWritable();
+                const blob = await canvas.convertToBlob({ type: file.type });
+                await writable.write(blob);
+                await writable.close();
+                
+                processor.log(`✔ 已输出: ${filePath}`);
+            } catch (error) {
+                processor.log(`❌ 处理失败: ${filePath} - ${error.message}`, true);
+                throw error;
+            }
+        }
+
+        // 初始化控件
+        initControls();
+    </script>
+</body>
+</html>
