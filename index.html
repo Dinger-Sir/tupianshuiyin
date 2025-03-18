@@ -2,440 +2,336 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>ProWatermark 专业水印工具</title>
+    <title>大学一点通 ProWatermark 专业水印工具</title>
     <style>
-        :root {
-            --primary: #2A2F35;
-            --secondary: #4A90E2;
-            --accent: #FF5A5F;
-            --bg: #F8F9FC;
-            --card-bg: #FFFFFF;
-            --text: #2A2F35;
-            --text-light: #6C757D;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg);
-            color: var(--text);
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
             line-height: 1.6;
-            min-height: 100vh;
-            padding: 2rem;
         }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
         .header {
             text-align: center;
-            margin-bottom: 3rem;
-            padding: 2rem 0;
+            margin-bottom: 30px;
         }
-
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary), #4A4E55);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
+        .author {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 8px;
         }
-        .card {
-            background: var(--card-bg);
-            border-radius: 1rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+        .config-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
-
-        .folder-item {
-            display: flex;
-            align-items: center;
-            padding: 1rem;
-            margin: 0.5rem 0;
-            background: var(--bg);
-            border-radius: 0.75rem;
-            border: 1px solid #EDF2F7;
+        .folder-instruction {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin: 10px 0 20px;
+            padding-left: 10px;
         }
-
-        .dual-control {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-            padding: 1rem;
-            background: var(--bg);
-            border-radius: 0.75rem;
-        }
-
-        .range-slider {
-            flex: 1;
-            height: 6px;
-            background: #EDF2F7;
-            border-radius: 3px;
-            accent-color: var(--secondary);
-        }
-
-        .num-input {
-            width: 100px;
-            padding: 0.75rem;
-            border: 2px solid #EDF2F7;
-            border-radius: 0.75rem;
-            font-size: 1rem;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 0.75rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: var(--secondary);
+        button {
+            background: #007bff;
             color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin: 5px;
         }
+        button:hover { background: #0056b3; }
+        input[type="range"] {
+            width: 200px;
+            margin: 0 10px;
+            vertical-align: middle;
+        }
+        #preview {
+            border: 2px solid #dee2e6;
+            max-width: 400px;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+        #progress {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            min-height: 60px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .color-danger { color: #dc3545; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1>图片水印批量处理工具</h1>
-            <p>由“大学一点通”团队开发</p>
-        </header>
-
-        <main>
-            <div class="card">
-                <h2>📁 任务队列</h2>
-                <div id="folder-queue">
-                    <button class="btn btn-primary" onclick="addFolderPair()">
-                        ＋ 添加处理任务
-                    </button>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2>⚙️ 参数设置</h2>
-                <div class="control-group">
-                    <input type="file" id="watermark-file" 
-                           class="btn" style="width:100%" accept="image/*">
-                </div>
-                
-                <div class="control-group">
-                    <label>不透明度</label>
-                    <div class="dual-control">
-                        <input type="range" class="range-slider" id="opacity" 
-                               min="0" max="1" step="0.01" value="0.5">
-                        <input type="number" class="num-input" id="opacity-input" 
-                               min="0" max="100" value="50">
-                        <span>%</span>
-                    </div>
-                </div>
-
-                <div class="control-group">
-                    <label>缩放比例</label>
-                    <div class="dual-control">
-                        <input type="range" class="range-slider" id="scale" 
-                               min="0.1" max="5" step="0.01" value="1">
-                        <input type="number" class="num-input" id="scale-input" 
-                               min="10" max="500" value="100">
-                        <span>%</span>
-                    </div>
-                </div>
-            </div>
-            <div class="card">
-                <h2>🔍 实时预览</h2>
-                <div class="preview-nav">
-                    <button class="btn btn-primary" onclick="changePreview(-1)">← 上一张</button>
-                    <span id="preview-counter" style="padding:0 1rem">准备就绪</span>
-                    <button class="btn btn-primary" onclick="changePreview(1)">下一张 →</button>
-                </div>
-                <canvas id="preview-canvas"></canvas>
-            </div>
-
-            <div style="text-align: center; margin: 2rem 0">
-                <button class="btn btn-primary" onclick="startProcessing()" 
-                        style="padding:1.25rem 3rem; font-size:1.1rem">
-                    🚀 开始批量处理
-                </button>
-                <div class="log-panel" id="processing-log"></div>
-            </div>
-        </main>
+    <div class="header">
+        <h1>图片水印批量处理工具</h1>
+        <div class="author">由「大学一点通」团队开发</div>
+<div class="author">更多信息，欢迎关注“大学一点通”公众号</div>
     </div>
+
+    <div class="config-section">
+        <h2>1. 文件夹设置</h2>
+        <div class="folder-instruction">
+            操作步骤：<br>
+            1. 点击下方按钮添加文件夹对<br>
+            2. 先选择输入文件夹，再选择对应的输出文件夹<br>
+            3. 可添加多组文件夹对进行批量处理
+        </div>
+        <div id="folderPairs">
+            <button onclick="addFolderPair()">➕ 添加文件夹对</button>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <h2>2. 水印设置</h2>
+        <div style="margin:15px 0">
+            <label>🔖 水印图片：</label>
+            <input type="file" id="watermarkFile" accept="image/*">
+        </div>
+        <div style="margin:15px 0">
+            <label>🎚 不透明度：</label>
+            <input type="range" id="opacity" min="0" max="1" step="0.01" value="0.5">
+            <span id="opacityValue">50%</span>
+        </div>
+        <div style="margin:15px 0">
+            <label>📏 水印大小：</label>
+            <input type="range" id="watermarkScale" min="0.1" max="5" step="0.01" value="1">
+            <span id="scaleValue">100%</span>
+        </div>
+        <div style="margin:15px 0">
+            <label>📍 水印位置：</label>
+            <select id="watermarkPosition">
+                <option value="center">居中</option>
+                <option value="top-left">左上</option>
+                <option value="top-right">右上</option>
+                <option value="bottom-left">左下</option>
+                <option value="bottom-right">右下</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <h2>3. 效果预览</h2>
+        <div style="color:#666; font-size:0.9em; margin:5px 0 15px">
+            ※ 自动显示第一个输入文件夹的首张图片
+        </div>
+        <canvas id="preview"></canvas>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0">
+        <button onclick="startProcessing()" style="padding:12px 30px;font-size:1.1em">
+            🚀 开始批量处理
+        </button>
+        <div id="progress"></div>
+    </div>
+
     <script>
-        const processor = {
-            queue: [],
-            watermark: null,
-            currentFolderIndex: 0,
-            currentImageIndex: 0,
-            imageList: [],
-
-            log(message, isError = false) {
-                const logElement = document.getElementById('processing-log');
-                const entry = document.createElement('div');
-                entry.className = `log-entry${isError ? ' error' : ''}`;
-                entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
-                logElement.appendChild(entry);
-                logElement.scrollTop = logElement.scrollHeight;
-            }
-        };
-
-        // 控件绑定
-        const initControls = () => {
-            const bindControl = (sliderId, inputId, converter) => {
-                const slider = document.getElementById(sliderId);
-                const input = document.getElementById(inputId);
-                
-                slider.addEventListener('input', e => {
-                    input.value = converter(e.target.value);
-                    updatePreview();
-                });
-                
-                input.addEventListener('input', e => {
-                    slider.value = e.target.value / (converter(1) || 100);
-                    updatePreview();
-                });
-            };
-
-            bindControl('opacity', 'opacity-input', v => Math.round(v * 100));
-            bindControl('scale', 'scale-input', v => Math.round(v * 100));
-        };
-
-        // 文件夹管理
-        const updateFolderDisplay = () => {
-            const container = document.getElementById('folder-queue');
-            container.innerHTML = processor.queue.map((pair, index) => `
-                <div class="folder-item">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                    </svg>
-                    <div style="flex:1">
-                        <div>${pair.name}</div>
-                        <div style="font-size:0.9em;color:var(--text-light)">
-                            输入：${pair.input.name} → 输出：${pair.output.name}
-                        </div>
-                    </div>
-                    <button class="btn" onclick="removeFolderPair(${index})">×</button>
-                </div>
-            `).join('<button class="btn btn-primary" onclick="addFolderPair()">＋ 添加处理任务</button>');
-        };
+        let folderPairs = [];
+        let watermarkImage = null;
+        let previewImage = null;
 
         async function addFolderPair() {
             try {
-                const [inputHandle, outputHandle] = await Promise.all([
-                    window.showDirectoryPicker(),
-                    window.showDirectoryPicker()
-                ]);
-
-                processor.queue.push({
-                    input: inputHandle,
-                    output: outputHandle,
-                    name: `任务组-${processor.queue.length + 1}`
-                });
+                const inputHandle = await window.showDirectoryPicker();
+                const outputHandle = await window.showDirectoryPicker();
                 
+                const pair = { input: inputHandle, output: outputHandle };
+                folderPairs.push(pair);
                 updateFolderDisplay();
-                processor.log(`✅ 已添加任务组：${inputHandle.name}`);
-                
-                if (processor.queue.length === 1) {
-                    await loadPreviewImages(0);
+
+                if (folderPairs.length === 1) {
+                    await loadFirstPreviewImage(pair.input);
                 }
-            } catch (error) {
-                processor.log(`❌ 添加失败：${error.message}`, true);
+            } catch (err) {
+                console.log('用户取消选择');
             }
         }
 
-        // 以下为其他核心函数...
-        // 需要继续补充JavaScript代码
-    </script>
-</body>
-</html>
-
-    <script>
-        // 第六部分：核心功能实现
-        // 图片加载与预览系统
-        async function loadPreviewImages(folderIndex) {
-            const folder = processor.queue[folderIndex];
-            if (!folder) return;
-
-            processor.imageList = [];
-            processor.currentFolderIndex = folderIndex;
-            
-            // 递归扫描目录
-            const scanDirectory = async (dirHandle, path = '') => {
-                for await (const entry of dirHandle.values()) {
-                    if (entry.kind === 'directory') {
-                        await scanDirectory(entry, `${path}${entry.name}/`);
-                    } else if (/\.(png|jpe?g)$/i.test(entry.name)) {
-                        processor.imageList.push({
-                            handle: entry,
-                            path: `${path}${entry.name}`
-                        });
-                    }
-                }
-            };
-
-            await scanDirectory(folder.input);
-            processor.currentImageIndex = 0;
-            updatePreview();
-            processor.log(`已加载 ${folder.name} 的 ${processor.imageList.length} 张图片`);
-        }
-
-        // 预览更新函数
-        async function updatePreview() {
-            const canvas = document.getElementById('preview-canvas');
-            const ctx = canvas.getContext('2d');
-            
-            if (!processor.imageList.length) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                return;
-            }
-
+        async function loadFirstPreviewImage(dirHandle) {
             try {
-                const entry = processor.imageList[processor.currentImageIndex];
-                const file = await entry.handle.getFile();
-                const img = await createImageBitmap(file);
-                
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0);
-
-                if (processor.watermark) {
-                    const scale = parseFloat(document.getElementById('scale').value);
-                    const opacity = parseFloat(document.getElementById('opacity').value);
-                    const wmWidth = processor.watermark.width * scale;
-                    const wmHeight = processor.watermark.height * scale;
-                    
-                    // 动态位置计算
-                    const padding = 20;
-                    const positionMap = {
-                        'top-left': [padding, padding],
-                        'top-right': [canvas.width - wmWidth - padding, padding],
-                        'bottom-left': [padding, canvas.height - wmHeight - padding],
-                        'bottom-right': [
-                            canvas.width - wmWidth - padding,
-                            canvas.height - wmHeight - padding
-                        ],
-                        'center': [
-                            (canvas.width - wmWidth) / 2,
-                            (canvas.height - wmHeight) / 2
-                        ]
-                    };
-                    
-                    const position = document.querySelector('#position-selector')?.value || 'bottom-right';
-                    const [x, y] = positionMap[position];
-
-                    ctx.globalAlpha = opacity;
-                    ctx.drawImage(processor.watermark, x, y, wmWidth, wmHeight);
-                    ctx.globalAlpha = 1.0;
+                const files = [];
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'file' && isImage(entry.name)) {
+                        files.push(entry);
+                    }
                 }
-
-                document.getElementById('preview-counter').textContent = 
-                    `${processor.currentFolderIndex+1}号任务组 第${processor.currentImageIndex+1}/${processor.imageList.length}张`;
-            } catch (error) {
-                processor.log(`预览更新失败: ${error.message}`, true);
+                if (files.length > 0) {
+                    files.sort((a, b) => a.name.localeCompare(b.name));
+                    const firstFile = await files[0].getFile();
+                    previewImage = await createImageBitmap(firstFile);
+                    updatePreview();
+                    logProgress(`已自动加载预览图：${files[0].name}`);
+                }
+            } catch (err) {
+                logProgress('⚠️ 自动预览失败，请确保目录中有图片文件', true);
             }
         }
 
-        // 导航控制
-        function changePreview(direction) {
-            const newIndex = processor.currentImageIndex + direction;
-            if (newIndex >= 0 && newIndex < processor.imageList.length) {
-                processor.currentImageIndex = newIndex;
-                updatePreview();
+        function updateFolderDisplay() {
+            const container = document.getElementById('folderPairs');
+            container.innerHTML = `
+                <button onclick="addFolderPair()">➕ 添加文件夹对</button>
+                ${folderPairs.map((pair, index) => `
+                    <div style="margin:10px 0; padding:10px; background:#fff; border-radius:4px">
+                        📂 输入：${pair.input.name}<br>
+                        📁 输出：${pair.output.name}
+                        <button onclick="removeFolderPair(${index})">🗑 删除</button>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function removeFolderPair(index) {
+            folderPairs.splice(index, 1);
+            updateFolderDisplay();
+        }
+
+        document.getElementById('watermarkFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                watermarkImage = new Image();
+                watermarkImage.onload = () => {
+                    const maxSize = 800;
+                    if (watermarkImage.width > maxSize || watermarkImage.height > maxSize) {
+                        const scale = Math.min(
+                            maxSize / watermarkImage.width,
+                            maxSize / watermarkImage.height
+                        );
+                        watermarkImage.width *= scale;
+                        watermarkImage.height *= scale;
+                    }
+                    updatePreview();
+                };
+                watermarkImage.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function updatePreview() {
+            if (!watermarkImage || !previewImage) return;
+
+            const canvas = document.getElementById('preview');
+            const ctx = canvas.getContext('2d');
+            canvas.width = previewImage.width;
+            canvas.height = previewImage.height;
+            
+            ctx.drawImage(previewImage, 0, 0);
+            
+            const scale = parseFloat(document.getElementById('watermarkScale').value);
+            const opacity = parseFloat(document.getElementById('opacity').value);
+            const width = watermarkImage.width * scale;
+            const height = watermarkImage.height * scale;
+            const [x, y] = calculatePosition(canvas.width, canvas.height, width, height);
+            
+            ctx.globalAlpha = opacity;
+            ctx.drawImage(watermarkImage, x, y, width, height);
+            ctx.globalAlpha = 1.0;
+        }
+
+        function calculatePosition(imgW, imgH, wmW, wmH) {
+            const padding = 20;
+            const pos = document.getElementById('watermarkPosition').value;
+            switch(pos) {
+                case 'top-left': return [padding, padding];
+                case 'top-right': return [imgW - wmW - padding, padding];
+                case 'bottom-left': return [padding, imgH - wmH - padding];
+                case 'bottom-right': return [imgW - wmW - padding, imgH - wmH - padding];
+                default: return [(imgW - wmW)/2, (imgH - wmH)/2];
             }
         }
 
-        // 批量处理核心
         async function startProcessing() {
-            if (!processor.watermark) {
-                processor.log('❌ 请先上传水印图片', true);
+            if (!watermarkImage) {
+                alert('请先选择水印图片');
+                return;
+            }
+            if (folderPairs.length === 0) {
+                alert('请至少添加一个文件夹对');
                 return;
             }
 
-            for (let i = 0; i < processor.queue.length; i++) {
-                const folder = processor.queue[i];
-                processor.log(`🚧 开始处理任务组: ${folder.name}`);
-                
-                try {
-                    await processFolder(folder.input, folder.output);
-                    processor.log(`✅ 完成处理: ${folder.name}`);
-                } catch (error) {
-                    processor.log(`❌ 处理失败: ${folder.name} - ${error.message}`, true);
-                }
+            const opacity = document.getElementById('opacity').value;
+            const scale = document.getElementById('watermarkScale').value;
+
+            for (const pair of folderPairs) {
+                await processFolder(pair, opacity, scale);
             }
-            processor.log('🎉 所有任务处理完成');
+            logProgress('✅ 全部处理完成！');
         }
 
-        // 递归处理文件夹
-        async function processFolder(inputHandle, outputHandle, path = '') {
-            // 创建输出目录
-            const outputDir = path ? 
-                await outputHandle.getDirectoryHandle(path, { create: true }) : 
-                outputHandle;
-
-            // 遍历输入目录
-            for await (const entry of inputHandle.values()) {
-                const entryPath = `${path}${entry.name}`;
-                
-                if (entry.kind === 'directory') {
-                    await processFolder(entry, outputHandle, `${entryPath}/`);
-                } else if (entry.kind === 'file') {
-                    if (/\.(png|jpe?g)$/i.test(entry.name)) {
-                        await processFile(entry, outputDir, entryPath);
+        async function processFolder(pair, opacity, scale) {
+            try {
+                for await (const entry of pair.input.values()) {
+                    if (entry.kind === 'file' && isImage(entry.name)) {
+                        await processFile(entry, pair.output, opacity, scale);
                     }
                 }
+            } catch (err) {
+                logProgress(`❌ 处理失败：${pair.input.name}`, true);
             }
         }
 
-        // 处理单个文件
-        async function processFile(fileHandle, outputDir, filePath) {
+        async function processFile(fileHandle, outputHandle, opacity, scale) {
             try {
                 const file = await fileHandle.getFile();
                 const img = await createImageBitmap(file);
                 
-                // 创建画布
                 const canvas = new OffscreenCanvas(img.width, img.height);
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0);
                 
-                // 应用水印
-                const scale = parseFloat(document.getElementById('scale').value);
-                const opacity = parseFloat(document.getElementById('opacity').value);
-                const wmWidth = processor.watermark.width * scale;
-                const wmHeight = processor.watermark.height * scale;
-                const [x, y] = [canvas.width - wmWidth - 20, canvas.height - wmHeight - 20];
-                
+                const wmWidth = watermarkImage.width * scale;
+                const wmHeight = watermarkImage.height * scale;
+                const [x, y] = calculatePosition(canvas.width, canvas.height, wmWidth, wmHeight);
                 ctx.globalAlpha = opacity;
-                ctx.drawImage(processor.watermark, x, y, wmWidth, wmHeight);
+                ctx.drawImage(watermarkImage, x, y, wmWidth, wmHeight);
                 
-                // 输出文件
-                const outputFile = await outputDir.getFileHandle(fileHandle.name, { create: true });
-                const writable = await outputFile.createWritable();
-                const blob = await canvas.convertToBlob({ type: file.type });
-                await writable.write(blob);
-                await writable.close();
+                const type = file.type.startsWith('image/') ? file.type : 'image/jpeg';
+                const blob = await canvas.convertToBlob({ type });
                 
-                processor.log(`✔ 已输出: ${filePath}`);
-            } catch (error) {
-                processor.log(`❌ 处理失败: ${filePath} - ${error.message}`, true);
-                throw error;
+                const newFile = await outputHandle.getFileHandle(fileHandle.name, { create: true });
+                const writer = await newFile.createWritable();
+                await writer.write(blob);
+                await writer.close();
+                
+                logProgress(`✔ 已处理：${fileHandle.name}`);
+            } catch (err) {
+                logProgress(`❌ 处理失败：${fileHandle.name}`, true);
             }
         }
 
-        // 初始化控件
-        initControls();
+        function isImage(filename) {
+            return /\.(png|jpe?g|webp)$/i.test(filename);
+        }
+
+        function logProgress(text, isError = false) {
+            const progress = document.getElementById('progress');
+            const msg = document.createElement('div');
+            msg.textContent = text;
+            if (isError) msg.className = 'color-danger';
+            progress.appendChild(msg);
+            progress.scrollTop = progress.scrollHeight;
+        }
+
+        document.getElementById('opacity').addEventListener('input', function() {
+            document.getElementById('opacityValue').textContent = 
+                Math.round(this.value * 100) + '%';
+            updatePreview();
+        });
+
+        document.getElementById('watermarkScale').addEventListener('input', function() {
+            document.getElementById('scaleValue').textContent = 
+                Math.round(this.value * 100) + '%';
+            updatePreview();
+        });
+
+        document.getElementById('watermarkPosition').addEventListener('change', updatePreview);
     </script>
 </body>
 </html>
