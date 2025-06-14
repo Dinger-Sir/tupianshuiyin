@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>大学一点通-ProWatermark 专业水印工具</title>
+    <title>大学一点通 ProWatermark 专业水印工具</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -65,7 +65,48 @@
             overflow-y: auto;
         }
         .color-danger { color: #dc3545; }
+        .right-click-tip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            pointer-events: none; /* 防止提示框影响鼠标事件 */
+        }
+       .right-click-tip.show {
+            opacity: 1;
+        }
     </style>
+    <script>
+        document.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            const tip = document.getElementById('right-click-tip');
+            tip.style.left = e.pageX + 'px';
+            tip.style.top = e.pageY + 'px';
+            tip.classList.add('show');
+
+            clearTimeout(tip.timer);
+            tip.timer = setTimeout(() => {
+                tip.classList.remove('show');
+            }, 1500);
+        });
+
+        document.addEventListener('copy', function (e) {
+            e.preventDefault();
+            alert('You cannot copy content of this page');
+        });
+
+        document.addEventListener('click', function (e) {
+            const tip = document.getElementById('right-click-tip');
+            if (!tip.contains(e.target)) {
+                clearTimeout(tip.timer);
+                tip.classList.remove('show');
+            }
+        });
+    </script>
 </head>
 <body>
     <div class="header">
@@ -333,5 +374,6 @@
 
         document.getElementById('watermarkPosition').addEventListener('change', updatePreview);
     </script>
+     <div id="right-click-tip" class="right-click-tip">You cannot copy content of this page</div>
 </body>
 </html>
